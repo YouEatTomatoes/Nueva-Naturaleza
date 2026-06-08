@@ -1,2 +1,2 @@
 # Nueva-Naturaleza
-This is a video game for the Cyberpi, a raspberry-pi powered device with joysticks and buttons.
+A simple bowser HTML5 canvas exploration game inspired by Legend of Zelda and Animal Crossing games.

@@ -15,14 +15,16 @@ if (/Android|Mobi|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/.test(na
 }
 
 const asset = {
-    start1: new Image()
-    //start2: new Image()
+    mobile: new Image(),
+    start1: new Image(),
+    //start2: new Image(),
 };
 var loadTracker = Object.keys(asset).length * -1;
+asset.mobile.onload = function() {loadTracker += 1;}
 asset.start1.onload = function() {loadTracker += 1;}
 //asset.somethin.onload = function() {loadTracker += 1;}
+asset.mobile.src = "./Assets/mobilecontroller.png"
 asset.start1.src = "./Assets/naturastartscreen.png"
-
 
 function draw() {
     requestAnimationFrame(draw);
@@ -34,6 +36,9 @@ function draw() {
     } else if (phase === 0) {
         console.log("yay we loaded!!!")
         ctx.drawImage(asset.start1, 0, 0);
+        if (mobile) {
+            ctx.drawImage(asset.mobile, 0, 256)
+        }
     }
 }
 draw();

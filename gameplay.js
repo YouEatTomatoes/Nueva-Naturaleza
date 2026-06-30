@@ -4,8 +4,10 @@ const ctx = canvas.getContext("2d");
 var mobile = false;
 var phase = -1;
 var progress = 0;
+var progressBench = 0;
 var select = 0;
-const frameGap = 75;
+const frameGap = 30;
+const textBounce = 1;
 
 if (/Android|Mobi|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/.test(navigator.userAgent)) {
     canvas.width = "256";
@@ -80,19 +82,21 @@ function drawText(text, font, x, y) {
     ctx.drawImage(temp_canvas, final_x, final_y)
     temp_canvas.remove()
 }
-
+function resetProgress() {
+    progressBench = Math.floor((Date.now()) / (1000 / 60));
+}
 
 function draw() {
     requestAnimationFrame(draw);
+    progress = Math.floor((Date.now()) / (1000 / 60)) - progressBench;
     if (phase === -1) {
         console.log("help im still loading :O");
         if (loadTracker === 0) {
             phase = 0;
             console.log("yay we loaded!");
+            resetProgress();
         }
     } else if (phase === 0) {
-        progress += 1
-        let textBounce = 1
         if (Math.floor(progress / frameGap) % 2 === 0) {
             ctx.drawImage(asset.start1, 0, 0);
         } else {

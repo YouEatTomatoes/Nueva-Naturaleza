@@ -15,7 +15,6 @@ var keyState = {
     menu: false,
     space: false,
 };
-var pressedState = false;
 const frameGap = 30;
 const textBounce = 1;
 
@@ -171,97 +170,79 @@ window.addEventListener("keyup", function(event) {
 });
 if (mobile) {
     function updateMobileStates() {
-        let rect = canvas.getBoundingClientRect();
-        let x = Math.round((event.clientX - rect.left) * (canvas.width / canvas.clientWidth));
-        let y = Math.round((event.clientY - rect.top) * (canvas.height / canvas.clientHeight));
-        if ((x < 41 && y > 256 && y < 384)  || (Math.abs(x - 35) + Math.abs(y - 320) <= 29)) {
-            if (pressedState && !keyState.left) {
-                leftPress()
+        let triggeredList = []
+        for (let i = 0; i < event.touches.length; i++) {
+            let rect = canvas.getBoundingClientRect();
+            let x = Math.round((event.touches[i].clientX - rect.left) * (canvas.width / canvas.clientWidth));
+            let y = Math.round((event.touches[i].clientY - rect.top) * (canvas.height / canvas.clientHeight));
+            if ((x < 41 && y > 256 && y < 384)  || (Math.abs(x - 35) + Math.abs(y - 320) <= 29)) {
+                if (!keyState.left) {
+                    leftPress()
+                }
+                triggeredList.push('left')
             }
-        } else if (keyState.left) {
-            leftRelease()
-        }
-        if ((x > 87 && x < 128 && y > 256 && y < 384)  || (Math.abs(x - 93) + Math.abs(y - 320) <= 29)) {
-            if (pressedState && !keyState.right) {
-                rightPress()
+            if ((x > 87 && x < 128 && y > 256 && y < 384)  || (Math.abs(x - 93) + Math.abs(y - 320) <= 29)) {
+                if (!keyState.right) {
+                    rightPress()
+                }
+                triggeredList.push('right')
             }
-        } else if (keyState.right) {
-            rightRelease()
-        }
-        if ((x > 0 && x < 128 && y > 256 && y < 296)  || (Math.abs(x - 64) + Math.abs(y - 290) <= 29)) {
-            if (pressedState && !keyState.up) {
-                upPress()
+            if ((x > 0 && x < 128 && y > 256 && y < 296)  || (Math.abs(x - 64) + Math.abs(y - 290) <= 29)) {
+                if (!keyState.up) {
+                    upPress()
+                }
+                triggeredList.push('up')
             }
-        } else if (keyState.up) {
-            upRelease()
-        }
-        if ((x > 0 && x < 128 && y > 343 && y < 384)  || (Math.abs(x - 64) + Math.abs(y - 350) <= 29)) {
-            if (pressedState && !keyState.down) {
-                downPress()
+            if ((x > 0 && x < 128 && y > 343 && y < 384)  || (Math.abs(x - 64) + Math.abs(y - 350) <= 29)) {
+                if (!keyState.down) {
+                    downPress()
+                }
+                triggeredList.push('down')
             }
-        } else if (keyState.down) {
-            downRelease()
-        }
-        if (x > 130 && x < 256 && y > 320 && y < 384) {
-            if (pressedState && !keyState.space) {
-                spacePress()
+            if ((x > 130 && x < 256 && y > 320 && y < 384)) {
+                if (!keyState.space) {
+                    spacePress()
+                }
+                triggeredList.push('space')
             }
-        } else if (keyState.space) {
-            spaceRelease()
-        }
-        if (x > 193 && x < 256 && y > 256 && y < 320) {
-            if (pressedState && !keyState.action) {
-                actionPress()
+            if ((x > 193 && x < 256 && y > 256 && y < 320)) {
+                if (!keyState.action) {
+                    actionPress()
+                }
+                triggeredList.push('action')
             }
-        } else if (keyState.action) {
-            actionRelease()
-        }
-        if (x > 130 && x < 193 && y > 256 && y < 320) {
-            if (pressedState && !keyState.menu) {
-                menuPress()
+            if ((x > 130 && x < 193 && y > 256 && y < 320)) {
+                if (!keyState.menu) {
+                    menuPress()
+                }
+                triggeredList.push('menu')
             }
-        } else if (keyState.menu) {
-            menuRelease()
         }
+    if (!triggeredList.includes('left') && keyState.left) {
+        leftRelease()
     }
-
-    function removeMobileStates() {
-        if (keyState.left) {
-            leftRelease()
-        }
-        if (keyState.right) {
-            rightRelease()
-        }
-        if (keyState.up) {
-            upRelease()
-        }
-        if (keyState.down) {
-            downRelease()
-        }
-        if (keyState.menu) {
-            menuRelease()
-        }
-        if (keyState.action) {
-            actionRelease()
-        }
-        if (keyState.space) {
-            spaceRelease()
-        }
+    if (!triggeredList.includes('right') && keyState.right) {
+        rightRelease()
     }
-
-    canvas.addEventListener("pointerdown", function(event) {
-        pressedState = true
-    })
-    canvas.addEventListener("pointerdown", updateMobileStates);
-    canvas.addEventListener('pointermove', updateMobileStates);
-    canvas.addEventListener("pointerup", function(event) {
-        pressedState = false
-    })
-    canvas.addEventListener("pointerup", removeMobileStates);
-    canvas.addEventListener("pointerup", function(event) {
-        pressedState = false
-    })
-    window.addEventListener("pointercancel", removeMobileStates);
+    if (!triggeredList.includes('up') && keyState.up) {
+        upRelease()
+    }
+    if (!triggeredList.includes('down') && keyState.down) {
+        downRelease()
+    }
+    if (!triggeredList.includes('space') && keyState.space) {
+        spaceRelease()
+    }
+    if (!triggeredList.includes('action') && keyState.action) {
+        actionRelease()
+    }
+    if (!triggeredList.includes('menu') && keyState.menu) {
+        menuRelease()
+    }
+}
+    canvas.addEventListener("touchstart", updateMobileStates);
+    canvas.addEventListener('touchmove', updateMobileStates);
+    canvas.addEventListener("touchend", updateMobileStates);
 }
 if ("keyispressed" === "keyispressed") {
 function spacePress() {

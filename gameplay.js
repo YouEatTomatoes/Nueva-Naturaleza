@@ -1,10 +1,14 @@
+//declaring variables
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
 var mobile = false;
 var phase = -1;
+var animPhase = 0;
 var progress = 0;
-var animProgress = 0;
+//var animProgress = 0;
 var progressBench = 0;
+var tBench = 0;
 var select = 0;
 var keyState = {
     up: false,
@@ -17,7 +21,17 @@ var keyState = {
 };
 const frameGap = 30;
 const textBounce = 1;
+var player = {
+    x: 128,
+    y: 128,
+    dx: 0,
+    dy: 0,
+    speed: 2,
+    bench: 0,
+}
 
+
+//initialize canvas based on device
 if (/Android|Mobi|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/.test(navigator.userAgent)) {
     canvas.width = "256";
     canvas.height = "384"; 
@@ -27,7 +41,13 @@ if (/Android|Mobi|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/.test(na
     canvas.height = "256"; 
     mobile = false;
 }
+//stop weird mobile vibrations
+canvas.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+});
 
+
+//initialize, load, and store images
 const asset = {
     mobile: new Image(),
     mobileLeft: new Image(),
@@ -39,6 +59,8 @@ const asset = {
     mobileO: new Image(),
     start1: new Image(),
     start2: new Image(),
+    character: new Image(),
+    testenv: new Image(),
 };
 var loadTracker = (Object.keys(asset).length + 2) * -1;
 asset.mobile.onload = function() {loadTracker += 1;};
@@ -51,6 +73,8 @@ asset.mobileX.onload = function() {loadTracker += 1;};
 asset.mobileO.onload = function() {loadTracker += 1;};
 asset.start1.onload = function() {loadTracker += 1;};
 asset.start2.onload = function() {loadTracker += 1;};
+asset.character.onload = function() {loadTracker += 1;};
+asset.testenv.onload = function() {loadTracker += 1;};
 asset.mobile.src = "./Assets/mobilecontroller.png";
 asset.mobileLeft.src = "./Assets/mobileleft.png";
 asset.mobileUp.src = "./Assets/mobileup.png";
@@ -59,14 +83,28 @@ asset.mobileDown.src = "./Assets/mobiledown.png";
 asset.mobileSpace.src = "./Assets/mobilespace.png";
 asset.mobileX.src = "./Assets/mobilex.png";
 asset.mobileO.src = "./Assets/mobileo.png";
-asset.start1.src = "./Assets/naturastartscreen.png";
-asset.start2.src = "./Assets/naturastartscreen2.png";
+asset.start1.src = "./Assets/startscreen.png";
+asset.start2.src = "./Assets/startscreen2.png";
+asset.character.src = "./Assets/character.png";
+asset.testenv.src = "./Assets/testenv.png";
+
+//initialize, load, and store images
 document.fonts.load("15px 'Cherry Bomb One'").then(() => {
     loadTracker += 1;
 });
 document.fonts.load("15px 'Playwrite NZ'").then(() => {
     loadTracker += 1;
 });
+
+const data = {
+    "0,0": {
+        "imgbase": [asset.testenv,],
+        "imgtop": [],
+        "walls": [],
+        "discover": []
+    }
+}
+
 function drawText(text, font, x, y) {
     const temp_canvas = document.createElement('canvas');
     const temp_context = temp_canvas.getContext('2d', { willReadFrequently: true });
@@ -112,10 +150,13 @@ function drawText(text, font, x, y) {
     ctx.drawImage(temp_canvas, final_x, final_y)
     temp_canvas.remove()
 }
+
+//manage progress variable for animation sequences
 function resetProgress() {
     progressBench = Math.floor((Date.now()) / (1000 / 60));
 }
 
+//handle keystrokes and mobile keypresses
 window.addEventListener("keydown", function(event) {
     if (event.code === 'Space') {
         spacePress();
@@ -268,6 +309,10 @@ function downPress() {
 }
 function spaceRelease() {
     keyState.space = false;
+    if (phase === 0 && animPhase === 0) {
+        animPhase = 1;
+        tBench = Math.floor((Date.now()) / (1000 / 60));
+    }
 }
 function actionRelease() {
     keyState.action = false;
@@ -289,10 +334,16 @@ function downRelease() {
 }
 }
 
+
+
+
+
+//main function!!!
 function draw() {
     requestAnimationFrame(draw);
-    animProgress = Math.floor((Date.now()) / (1000 / 60));
+    //animProgress = Math.floor((Date.now()) / (1000 / 60));
     progress = Math.floor((Date.now()) / (1000 / 60)) - progressBench;
+    //draw mobile gamepad
     if (mobile && phase >= 0) {
         ctx.drawImage(asset.mobile, 0, 256);
         if (keyState.left) {
@@ -317,6 +368,8 @@ function draw() {
             ctx.drawImage(asset.mobileO, 0, 256);
         }
     }
+
+    //skeleton frames and loading
     if (phase === -1) {
         console.log("help im still loading :O");
         let quickgradient = ctx.createLinearGradient(0, 0, 0, 256);
@@ -327,12 +380,14 @@ function draw() {
         ctx.fillStyle = '#000000'
         ctx.fillRect(0, 256, 256, 384)
         if (loadTracker === 0) {
-            phase = 0;
+            phase = 1;
             console.log("yay we loaded!");
             resetProgress();
         }
-    } else if (phase === 0) {
-        if (Math.floor(animProgress / frameGap) % 2 === 0) {
+
+    //start screen
+    } else if (Math.round(phase) === 0) {
+        if (Math.floor(progress / frameGap) % 2 === 0) {
             ctx.drawImage(asset.start1, 0, 0);
         } else {
             ctx.drawImage(asset.start2, 0, 0);
@@ -340,23 +395,61 @@ function draw() {
         ctx.textAlign = 'center';
         ctx.font = '28px "Cherry Bomb One"';
         ctx.fillStyle = '#ffffffc8';
-        ctx.fillText('Nueva Naturaleza', 128, 25 + (textBounce * (Math.floor(animProgress / frameGap / 2) % 2)));
-        if (progress <= 60) {
-            ctx.fillStyle = '#ffffff00'
-        } else if (progress <= 460) {
-            let t = ((progress - 260) / 400) * 12
+        ctx.fillText('Nueva Naturaleza', 128, 25 + (textBounce * (Math.floor(progress / frameGap / 2) % 2)));
+        let t = ((progress - 200) / 400) * 12
+        if (progress < 400) {
             ctx.fillStyle = `#ffffff${Math.round((1 / (1 + Math.exp(t * -1))) * 200).toString(16).padStart(2, '0')}`;
         }
         ctx.font = '14px "Cherry Bomb One"';
-        ctx.fillText('Press [    ]', 128, 50 + (textBounce * (Math.floor(animProgress / frameGap / 2) % 2)))
+        ctx.fillText('Press [ \u0332 \u0332 \u0332 ]', 128, 50 + (textBounce * (Math.floor(progress / frameGap / 2) % 2)))  
         
+    //start game
+    } else if (Math.round(phase) === 1) {
+        ctx.drawImage(data[`${Math.floor(player.x/256)},${Math.floor(player.y/256)}`]["imgbase"][Math.floor(progress / frameGap) % data[`${Math.floor(player.x/256)},${Math.floor(player.y/256)}`]["imgbase"].length], 0, 0)
+        ctx.drawImage(asset.character, Math.round(player.x - 8), Math.round(player.y - 8))
+        //ctx.drawImage(data[`${Math.floor(player.x/256)},${Math.floor(player.y/256)}`]["imgtop"][Math.floor(progress / frameGap) % data[`${Math.floor(player.x/256)},${Math.floor(player.y/256)}`]["imgtop"].length], 0, 0)
+        if (progress > player.bench) {
+            player.x += Math.sign(player.dx);
+            player.y += Math.sign(player.dy);
+            player.bench = progress + Math.round(Math.max(Math.abs(player.dx), Math.abs(player.dy)) / player.speed);
+            player.dx = 0;
+            player.dy = 0;
+            if (keyState.right) {
+                player.dx += 2
+            }
+            if (keyState.left) {
+                player.dx -= 2
+            }
+            if (keyState.up) {
+                player.dy -= 2
+            }
+            if (keyState.down) {
+                player.dy += 2
+            }
+            if (Math.abs(player.dx) > 0 && Math.abs(player.dy) > 0) {
+                player.dx *= 1.5
+                player.dy *= 1.5
+            }
+        }
+    }
+
+
+
+
+
+    if (animPhase === 1) {
+        let t = Math.floor((Date.now()) / (1000 / 60)) - tBench;
+        ctx.fillStyle = `#000000${(t * 2).toString(16).padStart(2, '0')}`
+        if (t > 127) {
+            if (phase !== 1) {
+                phase = 1;
+            }
+            ctx.fillStyle = `#000000${((254 - t) * 2).toString(16).padStart(2, '0')}`
+        }
+        if (t > 510) {
+            animPhase = 0
+        }
+        ctx.fillRect(0, 0, 256, 256)
     }
 }
 draw();
-
-/*
-mini fixes:
-change buffer gradient (skeleton frame)
-tied frame loop to a different variable
-created mobile button images
-*/

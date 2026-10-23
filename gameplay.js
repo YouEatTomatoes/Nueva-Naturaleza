@@ -18,6 +18,7 @@ var keyState = {
     action: false,
     menu: false,
     space: false,
+    Adminwalls: false,
 };
 const frameGap = 30;
 const textBounce = 1;
@@ -61,6 +62,9 @@ const asset = {
     start2: new Image(),
     character: new Image(),
     testenv: new Image(),
+    testenvfore: new Image(),
+    screen2fore: new Image(),
+    screen2back: new Image(),
 };
 var loadTracker = (Object.keys(asset).length + 2) * -1;
 asset.mobile.onload = function() {loadTracker += 1;};
@@ -75,6 +79,9 @@ asset.start1.onload = function() {loadTracker += 1;};
 asset.start2.onload = function() {loadTracker += 1;};
 asset.character.onload = function() {loadTracker += 1;};
 asset.testenv.onload = function() {loadTracker += 1;};
+asset.testenvfore.onload = function() {loadTracker += 1;};
+asset.screen2back.onload = function() {loadTracker += 1;};
+asset.screen2fore.onload = function() {loadTracker += 1;};
 asset.mobile.src = "./Assets/mobilecontroller.png";
 asset.mobileLeft.src = "./Assets/mobileleft.png";
 asset.mobileUp.src = "./Assets/mobileup.png";
@@ -87,6 +94,9 @@ asset.start1.src = "./Assets/startscreen.png";
 asset.start2.src = "./Assets/startscreen2.png";
 asset.character.src = "./Assets/character.png";
 asset.testenv.src = "./Assets/testenv.png";
+asset.testenvfore.src = "./Assets/testenvfore.png"
+asset.screen2back.src = "./Assets/screen2back.png"
+asset.screen2fore.src = "./Assets/screen2fore.png"
 
 //initialize, load, and store images
 document.fonts.load("15px 'Cherry Bomb One'").then(() => {
@@ -99,8 +109,14 @@ document.fonts.load("15px 'Playwrite NZ'").then(() => {
 const data = {
     "0,0": {
         "imgbase": [asset.testenv,],
-        "imgtop": [],
-        "walls": [],
+        "imgtop": [asset.testenvfore],
+        "walls": [[64, 64],],
+        "discover": []
+    },
+    "1,0": {
+        "imgbase": [asset.screen2back],
+        "imgtop": [asset.screen2fore],
+        "walls": [[27,130],[26,130],[28,130],[29,130],[30,129],[31,129],[32,129],[33,128],[34,128],[34,127],[34,126],[34,125],[34,124],[33,123],[33,122],[33,121],[33,120],[33,119],[33,118],[32,118],[31,118],[30,118],[28,118],[26,118],[24,118],[24,120],[24,122],[24,124],[23,126],[23,127],[23,128],[24,129],[25,129],[25,130],[24,130],[23,130],[23,129],[29,130],[30,130],[31,130],[32,130],[33,129],[34,129],[34,130],[33,130]],
         "discover": []
     }
 }
@@ -182,6 +198,13 @@ window.addEventListener("keydown", function(event) {
     if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
         leftPress();
     }
+    if (event.code === 'NumpadMultiply') {
+        keyState.Adminwalls = true;
+    }   
+    if (event.code === 'NumpadDivide') {
+        keyState.Adminwalls = false;
+        console.log(data[player.grid]["walls"])
+    }
 });
 window.addEventListener("keyup", function(event) {
     if (event.code === 'Space') {
@@ -207,6 +230,24 @@ window.addEventListener("keyup", function(event) {
     }
     if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
         leftRelease();
+    }
+});
+var mousepos = []
+canvas.addEventListener("mousemove", function(event) {
+    let rect = canvas.getBoundingClientRect()
+    mousepos = [Math.floor((event.clientX - rect.left) * (canvas.width / rect.width)), Math.floor((event.clientY - rect.top) * (canvas.height / rect.height))]
+})
+canvas.addEventListener("mousedown", function(event) {
+    if (keyState.Adminwalls) {
+        let rect = canvas.getBoundingClientRect()
+        mousepos = [Math.floor((event.clientX - rect.left) * (canvas.width / rect.width)), Math.floor((event.clientY - rect.top) * (canvas.height / rect.height))]
+        if (event.button === 2) {
+            if (data[player.grid]["walls"].some(pair => pair[0] === mousepos[0] && pair[1] === mousepos[1])) {
+                data[player.grid]["walls"].splice(data[player.grid]["walls"].findIndex(pair => pair[0] === mousepos[0] && pair[1] === mousepos[1]), 1)
+            }
+        } else {    
+            data[player.grid]["walls"].push(mousepos)
+        }
     }
 });
 if (mobile) {
@@ -337,7 +378,6 @@ function downRelease() {
 
 
 
-
 //main function!!!
 function draw() {
     requestAnimationFrame(draw);
@@ -368,7 +408,6 @@ function draw() {
             ctx.drawImage(asset.mobileO, 0, 256);
         }
     }
-
     //skeleton frames and loading
     if (phase === -1) {
         console.log("help im still loading :O");
@@ -405,12 +444,37 @@ function draw() {
         
     //start game
     } else if (Math.round(phase) === 1) {
-        ctx.drawImage(data[`${Math.floor(player.x/256)},${Math.floor(player.y/256)}`]["imgbase"][Math.floor(progress / frameGap) % data[`${Math.floor(player.x/256)},${Math.floor(player.y/256)}`]["imgbase"].length], 0, 0)
-        ctx.drawImage(asset.character, Math.round(player.x - 8), Math.round(player.y - 8))
-        //ctx.drawImage(data[`${Math.floor(player.x/256)},${Math.floor(player.y/256)}`]["imgtop"][Math.floor(progress / frameGap) % data[`${Math.floor(player.x/256)},${Math.floor(player.y/256)}`]["imgtop"].length], 0, 0)
+        //draw player
+        player.grid = `${Math.floor(player.x / 256)},${Math.floor(player.y / 256)}`;
+        player.lx = player.x - (256 * Math.floor(player.x/256))
+        player.ly = player.y - (256 * Math.floor(player.y/256))
+        ctx.drawImage(data[player.grid]["imgbase"][Math.floor(progress / frameGap) % data[player.grid]["imgbase"].length], 0, 0)
+        ctx.drawImage(asset.character, player.lx - 8, player.ly - 8)
+        ctx.drawImage(data[player.grid]["imgtop"][Math.floor(progress / frameGap) % data[`${Math.floor(player.x/256)},${Math.floor(player.y/256)}`]["imgtop"].length], 0, 0)
+        //movement
         if (progress > player.bench) {
-            player.x += Math.sign(player.dx);
-            player.y += Math.sign(player.dy);
+            //check for and draw walls
+            let allowMovement = [true, true];
+            for (let i = 0; i < data[player.grid]["walls"].length; i++) {
+                if (keyState.Adminwalls) {
+                    ctx.fillStyle = "yellow";
+                    ctx.fillRect(mousepos[0], mousepos[1], 1, 1)
+                    ctx.fillStyle = "red"
+                    ctx.fillRect(data[player.grid]["walls"][i][0], data[player.grid]["walls"][i][1], 1, 1)
+                }
+                if (data[player.grid]["walls"][i][0] > player.lx + Math.sign(player.dx) - 5 && data[player.grid]["walls"][i][0] < player.lx + Math.sign(player.dx) + 4 && data[player.grid]["walls"][i][1] > player.ly + 4 && data[player.grid]["walls"][i][1] < player.ly + 8) {
+                    allowMovement[0] = false;
+                }
+                if (data[player.grid]["walls"][i][0] > player.lx - 5 && data[player.grid]["walls"][i][0] < player.lx + 4 && data[player.grid]["walls"][i][1] > player.ly + Math.sign(player.dy) + 4 && data[player.grid]["walls"][i][1] < player.ly + Math.sign(player.dy) + 8) {
+                    allowMovement[1] = false;
+                }
+            }
+            if (allowMovement[0]) {
+                player.x += Math.sign(player.dx);
+            }
+            if (allowMovement[1]) {
+                player.y += Math.sign(player.dy);
+            }
             player.bench = progress + Math.round(Math.max(Math.abs(player.dx), Math.abs(player.dy)) / player.speed);
             player.dx = 0;
             player.dy = 0;

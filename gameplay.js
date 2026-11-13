@@ -6,9 +6,10 @@ var mobile = false;
 var phase = -1;
 var animPhase = 0;
 var progress = 0;
-//var animProgress = 0;
+var alreadyrendered = [];
 var progressBench = 0;
 var tBench = 0;
+var cameraBench = 0;
 var select = 0;
 var keyState = {
     up: false,
@@ -22,12 +23,17 @@ var keyState = {
 };
 const frameGap = 30;
 const textBounce = 1;
+const camerabound = 10;
 var player = {
     x: 128,
     y: 128,
     dx: 0,
     dy: 0,
-    speed: 2,
+    xshift: 0,
+    yshift: 0,
+    xtarget: 0,
+    ytarget: 0,
+    speed: 6, //0-10
     bench: 0,
 }
 
@@ -109,12 +115,14 @@ document.fonts.load("15px 'Playwrite NZ'").then(() => {
 const data = {
     "0,0": {
         "imgbase": [asset.testenv,],
+        "imgs": [[128, 64, asset.character]],
         "imgtop": [asset.testenvfore],
         "walls": [[64, 64],],
         "discover": []
     },
     "1,0": {
         "imgbase": [asset.screen2back],
+        "imgs": [[128, 64, asset.character]],
         "imgtop": [asset.screen2fore],
         "walls": [[27,130],[26,130],[28,130],[29,130],[30,129],[31,129],[32,129],[33,128],[34,128],[34,127],[34,126],[34,125],[34,124],[33,123],[33,122],[33,121],[33,120],[33,119],[33,118],[32,118],[31,118],[30,118],[28,118],[26,118],[24,118],[24,120],[24,122],[24,124],[23,126],[23,127],[23,128],[24,129],[25,129],[25,130],[24,130],[23,130],[23,129],[29,130],[30,130],[31,130],[32,130],[33,129],[34,129],[34,130],[33,130]],
         "discover": []
@@ -377,7 +385,14 @@ function downRelease() {
 
 
 
-
+function renderenv(grid) {
+    if (!alreadyrendered.includes(grid)) {
+        alreadyrendered.push(grid)
+        ctx.drawImage(data[grid]["imgbase"][Math.floor(progress / frameGap) % data[grid]["imgbase"].length], (grid.split(",")[0] * 256) - player.xshift, (grid.split(",")[1] * 256) - player.yshift)
+        ctx.drawImage(asset.character, player.x - 8 - player.xshift, player.y - 8 - player.yshift)
+        ctx.drawImage(data[grid]["imgtop"][Math.floor(progress / frameGap) % data[grid]["imgtop"].length], (grid.split(",")[0] * 256) - player.xshift, (grid.split(",")[1] * 256) - player.yshift)
+    }
+}
 //main function!!!
 function draw() {
     requestAnimationFrame(draw);
@@ -446,19 +461,51 @@ function draw() {
     } else if (Math.round(phase) === 1) {
         //draw player
         player.grid = `${Math.floor(player.x / 256)},${Math.floor(player.y / 256)}`;
-        player.lx = player.x - (256 * Math.floor(player.x/256))
-        player.ly = player.y - (256 * Math.floor(player.y/256))
-        ctx.drawImage(data[player.grid]["imgbase"][Math.floor(progress / frameGap) % data[player.grid]["imgbase"].length], 0, 0)
-        ctx.drawImage(asset.character, player.lx - 8, player.ly - 8)
-        ctx.drawImage(data[player.grid]["imgtop"][Math.floor(progress / frameGap) % data[`${Math.floor(player.x/256)},${Math.floor(player.y/256)}`]["imgtop"].length], 0, 0)
+        player.lx = player.x -  (256 * Math.floor(player.x / 256))
+        player.ly = player.y - (256 * Math.floor(player.y / 256))
+        if (player.lx <= camerabound) { //going to the left
+            player.xtarget = (player.grid.split(",")[0] * 256) + (player.lx - camerabound)
+        }
+        if (player.lx >= 256 - camerabound) { //going to the right
+            player.xtarget = (player.grid.split(",")[0] * 256) + (camerabound - (256 - player.lx))
+        }
+        if (player.ly <= camerabound) { //going up
+            player.ytarget = (player.grid.split(",")[1] * 256) + (player.ly - camerabound)
+        }
+        if (player.ly >= 256 - camerabound) { //going down
+            player.ytarget = (player.grid.split(",")[1] * 256) + (camerabound - (256 - player.ly))
+        }
+        if (progress > cameraBench) {
+            player.xshift += Math.sign(player.xtarget - player.xshift) * Math.ceil(Math.abs(player.xtarget - player.xshift) / 15)
+            cameraBench = progress + 1 - Math.abs(player.xtarget - player.xshift) / 256
+            console.log(cameraBench - progress)
+        }
+        //draw stuff (current, horizontal, vertical, diagonal)
+        alreadyrendered = []
+        renderenv(player.grid)        
+        renderenv(`${Math.floor(player.xshift / 256)},${Math.floor(player.yshift / 256)}`)
+        renderenv(`${Math.ceil(player.xshift / 256)},${Math.floor(player.yshift / 256)}`)
+        renderenv(`${Math.floor(player.xshift / 256)},${Math.ceil(player.yshift / 256)}`)
+        renderenv(`${Math.ceil(player.xshift / 256)},${Math.ceil(player.yshift / 256)}`)
+        
         //movement
+        if (keyState.Adminwalls) { //draw hitboxes
+            ctx.fillStyle = "yellow";
+            ctx.fillRect(mousepos[0], mousepos[1], 1, 1)
+            ctx.fillRect(player.lx - 4, player.ly + 5, 8, 3)
+            ctx.fillStyle = "purple"
+            ctx.fillRect(player.lx - 1, player.ly, 2, 1)
+            ctx.fillStyle = "rgba(200, 0, 256, 0.2)";
+            ctx.fillRect(0, 0, camerabound, 256)
+            ctx.fillRect(0, 0, 256, camerabound)
+            ctx.fillRect(256 - camerabound, 0, camerabound, 256)
+            ctx.fillRect(0, 256 - camerabound, 256, camerabound)
+        }
         if (progress > player.bench) {
             //check for and draw walls
             let allowMovement = [true, true];
             for (let i = 0; i < data[player.grid]["walls"].length; i++) {
-                if (keyState.Adminwalls) {
-                    ctx.fillStyle = "yellow";
-                    ctx.fillRect(mousepos[0], mousepos[1], 1, 1)
+                if (keyState.Adminwalls) { //draw hitboxes  
                     ctx.fillStyle = "red"
                     ctx.fillRect(data[player.grid]["walls"][i][0], data[player.grid]["walls"][i][1], 1, 1)
                 }
@@ -475,7 +522,7 @@ function draw() {
             if (allowMovement[1]) {
                 player.y += Math.sign(player.dy);
             }
-            player.bench = progress + Math.round(Math.max(Math.abs(player.dx), Math.abs(player.dy)) / player.speed);
+            player.bench = progress + Math.round(Math.max(Math.abs(player.dx), Math.abs(player.dy)) - (player.speed / 5));
             player.dx = 0;
             player.dy = 0;
             if (keyState.right) {

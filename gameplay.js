@@ -7,6 +7,8 @@ var phase = -1;
 var animPhase = 0;
 var progress = 0;
 var alreadyrendered = [];
+var torender = [];
+var tobedrawn = []
 var progressBench = 0;
 var tBench = 0;
 var cameraBench = 0;
@@ -71,6 +73,7 @@ const asset = {
     testenvfore: new Image(),
     screen2fore: new Image(),
     screen2back: new Image(),
+    tree: new Image(),
 };
 var loadTracker = (Object.keys(asset).length + 2) * -1;
 asset.mobile.onload = function() {loadTracker += 1;};
@@ -88,6 +91,7 @@ asset.testenv.onload = function() {loadTracker += 1;};
 asset.testenvfore.onload = function() {loadTracker += 1;};
 asset.screen2back.onload = function() {loadTracker += 1;};
 asset.screen2fore.onload = function() {loadTracker += 1;};
+asset.tree.onload = function() {loadTracker += 1;};
 asset.mobile.src = "./Assets/mobilecontroller.png";
 asset.mobileLeft.src = "./Assets/mobileleft.png";
 asset.mobileUp.src = "./Assets/mobileup.png";
@@ -103,6 +107,7 @@ asset.testenv.src = "./Assets/testenv.png";
 asset.testenvfore.src = "./Assets/testenvfore.png"
 asset.screen2back.src = "./Assets/screen2back.png"
 asset.screen2fore.src = "./Assets/screen2fore.png"
+asset.tree.src = "./Assets/tree.png"
 
 //initialize, load, and store images
 document.fonts.load("15px 'Cherry Bomb One'").then(() => {
@@ -115,16 +120,16 @@ document.fonts.load("15px 'Playwrite NZ'").then(() => {
 const data = {
     "0,0": {
         "imgbase": [asset.testenv,],
-        "imgs": [[128, 64, asset.character]],
+        "imgs": [[128, 64, 0, asset.character, 1]],
         "imgtop": [asset.testenvfore],
         "walls": [[64, 64],],
         "discover": []
     },
     "1,0": {
         "imgbase": [asset.screen2back],
-        "imgs": [[128, 64, asset.character]],
+        "imgs": [[128, 64, 5, asset.tree, 1]],
         "imgtop": [asset.screen2fore],
-        "walls": [[27,130],[26,130],[28,130],[29,130],[30,129],[31,129],[32,129],[33,128],[34,128],[34,127],[34,126],[34,125],[34,124],[33,123],[33,122],[33,121],[33,120],[33,119],[33,118],[32,118],[31,118],[30,118],[28,118],[26,118],[24,118],[24,120],[24,122],[24,124],[23,126],[23,127],[23,128],[24,129],[25,129],[25,130],[24,130],[23,130],[23,129],[29,130],[30,130],[31,130],[32,130],[33,129],[34,129],[34,130],[33,130]],
+        "walls": [[34,127],[34,124],[33,123],[33,121],[33,118],[24,118],[24,124],[23,126],[23,128],[23,130],[29,130],[34,130],[152,134],[155,134],[158,133],[160,132],[160,129],[155,129],[150,129],[149,130],[149,133],[29,118],[24,121]],
         "discover": []
     }
 }
@@ -389,7 +394,18 @@ function renderenv(grid) {
     if (!alreadyrendered.includes(grid)) {
         alreadyrendered.push(grid)
         ctx.drawImage(data[grid]["imgbase"][Math.floor(progress / frameGap) % data[grid]["imgbase"].length], (grid.split(",")[0] * 256) - player.xshift, (grid.split(",")[1] * 256) - player.yshift)
+        tobedrawn = []
+        for (let i = 0; i < data[grid]["imgs"].length; i++) {
+            if (data[grid]["imgs"][i][3].naturalHeight + data[grid]["imgs"][i][1] - data[grid]["imgs"][i][2] <= player.ly + 8) {
+                ctx.drawImage(data[grid]["imgs"][i][3], data[grid]["imgs"][i][0] + (grid.split(",")[0] * 256) - player.xshift, data[grid]["imgs"][i][1] + (grid.split(",")[1] * 256) - player.yshift)
+            } else {
+                tobedrawn.push([data[grid]["imgs"][i][3], data[grid]["imgs"][i][0] + (grid.split(",")[0] * 256) - player.xshift, data[grid]["imgs"][i][1] + (grid.split(",")[1] * 256) - player.yshift])
+            }
+        }
         ctx.drawImage(asset.character, player.x - 8 - player.xshift, player.y - 8 - player.yshift)
+        for (let i = 0; i < tobedrawn.length; i++) {
+            ctx.drawImage(tobedrawn[i][0], tobedrawn[i][1], tobedrawn[i][2])
+        }
         ctx.drawImage(data[grid]["imgtop"][Math.floor(progress / frameGap) % data[grid]["imgtop"].length], (grid.split(",")[0] * 256) - player.xshift, (grid.split(",")[1] * 256) - player.yshift)
     }
 }
@@ -478,16 +494,34 @@ function draw() {
         if (progress > cameraBench) {
             player.xshift += Math.sign(player.xtarget - player.xshift) * Math.ceil(Math.abs(player.xtarget - player.xshift) / 15)
             cameraBench = progress + 1 - Math.abs(player.xtarget - player.xshift) / 256
-            console.log(cameraBench - progress)
         }
-        //draw stuff (current, horizontal, vertical, diagonal)
-        alreadyrendered = []
-        renderenv(player.grid)        
-        renderenv(`${Math.floor(player.xshift / 256)},${Math.floor(player.yshift / 256)}`)
-        renderenv(`${Math.ceil(player.xshift / 256)},${Math.floor(player.yshift / 256)}`)
-        renderenv(`${Math.floor(player.xshift / 256)},${Math.ceil(player.yshift / 256)}`)
-        renderenv(`${Math.ceil(player.xshift / 256)},${Math.ceil(player.yshift / 256)}`)
-        
+        //draw stuff (current, horizontal, vertical, diagonal, diagonal)
+        torender = []
+        if (!torender.includes(player.grid)) {torender.push(player.grid)}
+        if (!torender.includes(`${Math.floor(player.xshift / 256)},${Math.floor(player.yshift / 256)}`)) {torender.push(`${Math.floor(player.xshift / 256)},${Math.floor(player.yshift / 256)}`)}
+        if (!torender.includes(`${Math.ceil(player.xshift / 256)},${Math.floor(player.yshift / 256)}`)) {torender.push(`${Math.ceil(player.xshift / 256)},${Math.floor(player.yshift / 256)}`)}
+        if (!torender.includes(`${Math.floor(player.xshift / 256)},${Math.ceil(player.yshift / 256)}`)) {torender.push(`${Math.floor(player.xshift / 256)},${Math.ceil(player.yshift / 256)}`)}
+        if (!torender.includes(`${Math.ceil(player.xshift / 256)},${Math.ceil(player.yshift / 256)}`)) {torender.push(`${Math.ceil(player.xshift / 256)},${Math.ceil(player.yshift / 256)}`)}
+        tobedrawn = []
+        for (const grid of torender) {
+            ctx.drawImage(data[grid]["imgbase"][Math.floor(progress / frameGap) % data[grid]["imgbase"].length], (grid.split(",")[0] * 256) - player.xshift, (grid.split(",")[1] * 256) - player.yshift)
+            for (let i = 0; i < data[grid]["imgs"].length; i++) {
+                if (data[grid]["imgs"][i][3].naturalHeight + data[grid]["imgs"][i][1] - data[grid]["imgs"][i][2] <= player.ly + 8) {
+                    ctx.drawImage(data[grid]["imgs"][i][3], data[grid]["imgs"][i][0] + (grid.split(",")[0] * 256) - player.xshift, data[grid]["imgs"][i][1] + (grid.split(",")[1] * 256) - player.yshift)
+                    console.log(data[grid]["imgs"][i][3], data[grid]["imgs"][i][0] + (grid.split(",")[0] * 256) - player.xshift, data[grid]["imgs"][i][1] + (grid.split(",")[1] * 256) - player.yshift)
+
+                } else {
+                    tobedrawn.push([data[grid]["imgs"][i][3], data[grid]["imgs"][i][0] + (grid.split(",")[0] * 256) - player.xshift, data[grid]["imgs"][i][1] + (grid.split(",")[1] * 256) - player.yshift])
+                }
+            }
+        }
+        ctx.drawImage(asset.character, player.x - 8 - player.xshift, player.y - 8 - player.yshift)
+        for (let i = 0; i < tobedrawn.length; i++) {
+            ctx.drawImage(tobedrawn[i][0], tobedrawn[i][1], tobedrawn[i][2])
+        }
+        for (const grid of torender) {
+            ctx.drawImage(data[grid]["imgtop"][Math.floor(progress / frameGap) % data[grid]["imgtop"].length], (grid.split(",")[0] * 256) - player.xshift, (grid.split(",")[1] * 256) - player.yshift)
+        }
         //movement
         if (keyState.Adminwalls) { //draw hitboxes
             ctx.fillStyle = "yellow";
